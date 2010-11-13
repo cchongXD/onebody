@@ -1009,6 +1009,12 @@ en:
     select_before_proceeding: Please select a family before proceeding.
     too_many: Too many at once
 
+  facebook:
+    facebook: Facebook
+    facebook_settings: Facebook Settings for {{name}}
+    import_note_html: "Awesome! You've now connected your OneBody and Facebook profiles. <a href=\"{{url}}\">Click here</a> to copy some of your FB profile over, or to setup other FB settings."
+    visit_profile: "Visit this profile on Facebook..."
+
   feeds:
     add_a_feed: Add a Feed
     add_the_feed: Yes, this looks right. Add the feed.
@@ -2010,6 +2016,7 @@ en:
 
   session:
     account_not_activated_html: Your account hasn't been activated yet. <a href="/pages/help">Click here</a> to get started.
+    connect_with_fb: Connect with Facebook
     create_the_first_user: "You may create the first user by running the command:"
     email_address: "Email Address:"
     email_found: That email address was found, but you must verify it before you can sign in.

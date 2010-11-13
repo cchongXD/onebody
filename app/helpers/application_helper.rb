@@ -116,6 +116,14 @@ module ApplicationHelper
     html
   end
 
+  def common_nav_left_links
+    "<div id=\"fbconnect-button\"><fb:login-button onlogin=\"onFacebookLogin();\">#{t('session.connect_with_fb')}</fb:login-button></div>".html_safe
+  end
+
+  def external_content
+    render(:partial => 'facebook/sessions/session')
+  end
+
   def menu_content
     render :partial => 'people/menus'
   end

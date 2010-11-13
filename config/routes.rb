@@ -55,6 +55,10 @@ OneBody::Application.routes.draw do
     resource :photo
     resources :groups, :pictures, :groupies, :services, :albums, :feeds, :notes, :verses
     resource :privacy, :blog, :calendar
+    namespace :facebook do
+      resource :import
+      resource :account
+    end
   end
 
   resources :families do
@@ -200,5 +204,9 @@ OneBody::Application.routes.draw do
     end
     resources :updates, :admins, :membership_requests, :reports
     resource :theme, :api_key, :logo
+  end
+
+  namespace :facebook do
+    resource :session
   end
 end

@@ -852,6 +852,12 @@ table.comments {
   @include shadow;
 }
 
+/* Facebook Connect */
+
+#fbconnect-button {
+  display: none;
+}
+
 /* Generic Styles */
 
 .margin-top     { margin-top:     15px; }
@@ -969,4 +975,15 @@ table.members {
 .color-preview {
   display: inline-block;
   width: 20px;
+}
+
+/* Facebook */
+
+#new-fb-account {
+  background-color: #eee;
+  padding: 15px;
+  @include curve;
+  @include shadow;
+  margin-bottom: 25px;
+  text-align: center;
 }

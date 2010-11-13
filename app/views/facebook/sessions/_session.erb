@@ -1,0 +1,38 @@
+<div id="fb-root"></div>
+
+<%= javascript_include_tag 'http://connect.facebook.net/en_US/all.js' %>
+<script type="text/javascript">
+  FB.init({ apiKey: 'bc9ae687c3bbbe5c06760caca2834c1f' })
+  FB.XFBML.parse();
+  FB.getLoginStatus(handleSessionResponse);
+  function handleSessionResponse(response) {
+    if (response.session) {
+      FB.api(
+        {
+          method: 'fql.query',
+          query: 'SELECT name, pic_square FROM profile WHERE id=' + FB.getSession().uid
+        },
+        function(response) {
+          var user = response[0];
+          $('#user-info').html(
+            '<img src="' + user.pic_square + '" style="width:28px;" class="icon"> ' + user.name + ' <a href="#" onclick="fbDisconnect();return false;" class="delete-icon">&nbsp;</a>'
+          ).show();
+        }
+      );
+      $('#fbconnect-button').hide();
+    } else {
+      $('#fbconnect-button').show();
+      $('#user-info').html('');
+    }
+  }
+  function onFacebookLogin() {
+    var session = FB.getSession();
+    if(session) {
+      $.post('<%= facebook_session_path %>', {facebook_id:session.uid});
+    }
+  }
+  function fbDisconnect() {
+    FB.api({ method: 'Auth.revokeAuthorization' }, handleSessionResponse)
+  }
+  FB.Event.subscribe('auth.statusChange', handleSessionResponse);
+</script>
