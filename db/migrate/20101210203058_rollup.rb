@@ -1,38 +1,19 @@
-# Rollup Migration
-# ================
-# If you are upgrading from a previous (0.8.x) version of OneBody,
-# be sure to upgrade to the latest release within that series
-# (0.8.1 as of this writing) and run the migrations.
-# Then you can upgrade to this release.
-
 class Rollup < ActiveRecord::Migration
   def self.up
     create_table "admins", :force => true do |t|
-      t.boolean  "manage_publications",    :default => false
-      t.boolean  "manage_log",             :default => false
-      t.boolean  "manage_music",           :default => false
-      t.boolean  "view_hidden_properties", :default => false
-      t.boolean  "edit_profiles",          :default => false
-      t.boolean  "manage_groups",          :default => false
-      t.boolean  "manage_shares",          :default => false
-      t.boolean  "manage_notes",           :default => false
-      t.boolean  "manage_messages",        :default => false
-      t.boolean  "view_hidden_profiles",   :default => false
-      t.boolean  "manage_prayer_signups",  :default => false
-      t.boolean  "manage_comments",        :default => false
-      t.boolean  "manage_recipes",         :default => false
-      t.boolean  "manage_pictures",        :default => false
-      t.boolean  "manage_access",          :default => false
-      t.boolean  "view_log",               :default => false
-      t.boolean  "manage_updates",         :default => false
       t.datetime "created_at"
       t.datetime "updated_at"
       t.integer  "site_id"
-      t.boolean  "edit_pages",             :default => false
-      t.boolean  "import_data",            :default => false
-      t.boolean  "export_data",            :default => false
-      t.boolean  "run_reports",            :default => false
-      t.boolean  "manage_news",            :default => false
+      t.string   "template_name", :limit => 100
+      t.text     "flags"
+      t.boolean  "super_admin",                  :default => false
+    end
+
+    add_index "admins", ["site_id"], :name => "index_site_id_on_admins"
+
+    create_table "admins_reports", :id => false, :force => true do |t|
+      t.integer "admin_id"
+      t.integer "report_id"
     end
 
     create_table "albums", :force => true do |t|
@@ -43,15 +24,22 @@ class Rollup < ActiveRecord::Migration
       t.datetime "created_at"
       t.datetime "updated_at"
       t.integer  "group_id"
+      t.boolean  "is_public",   :default => false
     end
 
     create_table "attachments", :force => true do |t|
       t.integer  "message_id"
       t.string   "name"
-      t.string   "content_type", :limit => 50
+      t.string   "content_type",      :limit => 50
       t.datetime "created_at"
       t.integer  "site_id"
       t.integer  "page_id"
+      t.integer  "group_id"
+      t.string   "file_file_name"
+      t.string   "file_content_type"
+      t.string   "file_fingerprint",  :limit => 50
+      t.integer  "file_file_size"
+      t.datetime "file_updated_at"
     end
 
     create_table "attendance_records", :force => true do |t|
@@ -61,6 +49,70 @@ class Rollup < ActiveRecord::Migration
       t.datetime "attended_at"
       t.datetime "created_at"
       t.datetime "updated_at"
+      t.string   "first_name"
+      t.string   "last_name"
+      t.string   "family_name"
+      t.string   "age"
+      t.string   "can_pick_up",    :limit => 100
+      t.string   "cannot_pick_up", :limit => 100
+      t.string   "medical_notes",  :limit => 200
+    end
+
+    add_index "attendance_records", ["attended_at"], :name => "index_attended_at_on_attendance_records"
+    add_index "attendance_records", ["group_id"], :name => "index_group_id_on_attendance_records"
+    add_index "attendance_records", ["person_id"], :name => "index_person_id_on_attendance_records"
+    add_index "attendance_records", ["site_id"], :name => "index_site_id_on_attendance_records"
+
+    create_table "auth_tokens", :force => true do |t|
+      t.integer  "person_id"
+      t.integer  "site_id"
+      t.string   "session_id", :limit => 50
+      t.string   "ip",         :limit => 15
+      t.string   "token"
+      t.datetime "created_at"
+      t.datetime "updated_at"
+    end
+
+    create_table "blog_items", :force => true do |t|
+      t.integer  "site_id"
+      t.string   "name"
+      t.text     "body"
+      t.integer  "album_id"
+      t.integer  "person_id"
+      t.integer  "bloggable_id"
+      t.string   "bloggable_type"
+      t.datetime "created_at"
+    end
+
+    add_index "blog_items", ["person_id"], :name => "index_blog_items_on_person_id"
+
+    create_table "checkin_attendance_records", :force => true do |t|
+      t.integer  "person_id"
+      t.integer  "site_id"
+      t.string   "barcode_id",     :limit => 50
+      t.string   "first_name"
+      t.string   "last_name"
+      t.string   "family_name"
+      t.string   "age"
+      t.string   "section"
+      t.datetime "in"
+      t.datetime "out"
+      t.boolean  "void",                          :default => false
+      t.string   "can_pick_up",    :limit => 100
+      t.string   "cannot_pick_up", :limit => 100
+      t.string   "medical_notes",  :limit => 200
+      t.datetime "created_at"
+      t.datetime "updated_at"
+    end
+
+    create_table "checkin_times", :force => true do |t|
+      t.integer  "weekday"
+      t.integer  "time"
+      t.datetime "the_datetime"
+      t.integer  "site_id"
+      t.datetime "created_at"
+      t.datetime "updated_at"
+      t.string   "campus"
     end
 
     create_table "comments", :force => true do |t|
@@ -78,36 +130,46 @@ class Rollup < ActiveRecord::Migration
     end
 
     create_table "families", :force => true do |t|
-      t.integer  "legacy_id"
       t.string   "name"
       t.string   "last_name"
-      t.string   "suffix",             :limit => 25
       t.string   "address1"
       t.string   "address2"
       t.string   "city"
-      t.string   "state",              :limit => 10
-      t.string   "zip",                :limit => 10
-      t.string   "home_phone",         :limit => 25
+      t.string   "state",                :limit => 10
+      t.string   "zip",                  :limit => 10
+      t.string   "home_phone",           :limit => 25
       t.string   "email"
       t.float    "latitude"
       t.float    "longitude"
-      t.boolean  "share_address",                    :default => true
-      t.boolean  "share_mobile_phone",               :default => false
-      t.boolean  "share_work_phone",                 :default => false
-      t.boolean  "share_fax",                        :default => false
-      t.boolean  "share_email",                      :default => false
-      t.boolean  "share_birthday",                   :default => true
-      t.boolean  "share_anniversary",                :default => true
+      t.integer  "legacy_id"
       t.datetime "updated_at"
-      t.boolean  "wall_enabled",                     :default => true
-      t.boolean  "visible",                          :default => true
-      t.boolean  "share_activity",                   :default => true
+      t.boolean  "wall_enabled",                       :default => true
+      t.boolean  "visible",                            :default => true
       t.integer  "site_id"
-      t.boolean  "share_home_phone",                 :default => true
-      t.boolean  "deleted",                          :default => false
+      t.boolean  "deleted",                            :default => false
+      t.string   "barcode_id",           :limit => 50
+      t.datetime "barcode_assigned_at"
+      t.boolean  "barcode_id_changed",                 :default => false
+      t.string   "alternate_barcode_id", :limit => 50
+      t.string   "photo_file_name"
+      t.string   "photo_content_type"
+      t.string   "photo_fingerprint",    :limit => 50
+      t.integer  "photo_file_size"
+      t.datetime "photo_updated_at"
     end
 
     add_index "families", ["last_name", "name"], :name => "index_family_names"
+
+    create_table "feeds", :force => true do |t|
+      t.integer  "person_id"
+      t.string   "name",        :limit => 100
+      t.string   "url",         :limit => 1000
+      t.integer  "site_id"
+      t.integer  "error_count",                 :default => 0
+      t.datetime "created_at"
+      t.datetime "updated_at"
+      t.string   "last_url",    :limit => 1000
+    end
 
     create_table "friendship_requests", :force => true do |t|
       t.integer  "person_id"
@@ -130,21 +192,45 @@ class Rollup < ActiveRecord::Migration
     add_index "friendships", ["friend_id"], :name => "index_friendships_on_friend_id"
     add_index "friendships", ["person_id"], :name => "index_friendships_on_person_id"
 
+    create_table "generated_files", :force => true do |t|
+      t.integer  "site_id"
+      t.integer  "job_id"
+      t.integer  "person_id"
+      t.string   "file_file_name"
+      t.string   "file_content_type"
+      t.string   "file_fingerprint",  :limit => 50
+      t.integer  "file_file_size"
+      t.datetime "file_updated_at"
+      t.datetime "created_at"
+      t.datetime "updated_at"
+    end
+
+    create_table "group_times", :force => true do |t|
+      t.integer  "group_id"
+      t.integer  "checkin_time_id"
+      t.boolean  "print_nametag",                  :default => false
+      t.integer  "ordering"
+      t.integer  "site_id"
+      t.datetime "created_at"
+      t.datetime "updated_at"
+      t.string   "section",         :limit => 100
+    end
+
     create_table "groups", :force => true do |t|
       t.string   "name",                      :limit => 100
-      t.text     "description"
+      t.string   "description",               :limit => 500
       t.string   "meets",                     :limit => 100
       t.string   "location",                  :limit => 100
-      t.text     "directions"
-      t.text     "other_notes"
-      t.string   "category",                  :limit => 50
+      t.string   "directions",                :limit => 500
+      t.string   "other_notes",               :limit => 500
       t.integer  "creator_id"
-      t.boolean  "private",                                  :default => false
       t.string   "address"
       t.boolean  "members_send",                             :default => true
+      t.boolean  "private",                                  :default => false
+      t.string   "category",                  :limit => 50
       t.integer  "leader_id"
       t.datetime "updated_at"
-      t.boolean  "hidden",                                   :default => false
+      t.boolean  "hidden"
       t.boolean  "approved",                                 :default => false
       t.string   "link_code"
       t.integer  "parents_of"
@@ -155,27 +241,50 @@ class Rollup < ActiveRecord::Migration
       t.boolean  "attendance",                               :default => true
       t.integer  "legacy_id"
       t.string   "gcal_private_link"
-      t.boolean  "approval_required_to_join",                :default => true
+      t.boolean  "approval_required_to_join",                :default => false
       t.boolean  "pictures",                                 :default => true
+      t.string   "cm_api_list_id",            :limit => 50
+      t.string   "photo_file_name"
+      t.string   "photo_content_type"
+      t.string   "photo_fingerprint",         :limit => 50
+      t.integer  "photo_file_size"
+      t.datetime "photo_updated_at"
     end
 
     add_index "groups", ["category"], :name => "index_groups_on_category"
+    add_index "groups", ["site_id"], :name => "index_site_id_on_groups"
+
+    create_table "jobs", :force => true do |t|
+      t.integer  "site_id"
+      t.string   "command"
+      t.datetime "created_at"
+      t.datetime "updated_at"
+    end
 
     create_table "log_items", :force => true do |t|
-      t.string   "name"
       t.text     "object_changes"
       t.integer  "person_id"
-      t.integer  "group_id"
       t.datetime "created_at"
       t.datetime "reviewed_on"
       t.integer  "reviewed_by"
       t.datetime "flagged_on"
       t.string   "flagged_by"
       t.boolean  "deleted",        :default => false
+      t.string   "name"
+      t.integer  "group_id"
       t.integer  "site_id"
       t.integer  "loggable_id"
       t.string   "loggable_type"
     end
+
+    add_index "log_items", ["created_at"], :name => "index_log_items_on_created_at"
+    add_index "log_items", ["flagged_on"], :name => "index_log_items_on_flagged_on"
+    add_index "log_items", ["group_id"], :name => "index_log_items_on_group_id"
+    add_index "log_items", ["loggable_id"], :name => "index_log_items_on_loggable_id"
+    add_index "log_items", ["loggable_type"], :name => "index_log_items_on_loggable_type"
+    add_index "log_items", ["person_id"], :name => "index_log_items_on_person_id"
+    add_index "log_items", ["reviewed_on"], :name => "index_log_items_on_reviewed_on"
+    add_index "log_items", ["site_id"], :name => "index_log_items_on_site_id"
 
     create_table "membership_requests", :force => true do |t|
       t.integer  "person_id"
@@ -188,7 +297,6 @@ class Rollup < ActiveRecord::Migration
       t.integer  "group_id"
       t.integer  "person_id"
       t.boolean  "admin",              :default => false
-      t.boolean  "get_email",          :default => true
       t.boolean  "share_address",      :default => false
       t.boolean  "share_mobile_phone", :default => false
       t.boolean  "share_work_phone",   :default => false
@@ -196,6 +304,7 @@ class Rollup < ActiveRecord::Migration
       t.boolean  "share_email",        :default => false
       t.boolean  "share_birthday",     :default => false
       t.boolean  "share_anniversary",  :default => false
+      t.boolean  "get_email",          :default => true
       t.datetime "updated_at"
       t.integer  "code"
       t.integer  "site_id"
@@ -210,7 +319,6 @@ class Rollup < ActiveRecord::Migration
     create_table "messages", :force => true do |t|
       t.integer  "group_id"
       t.integer  "person_id"
-      t.integer  "to_person_id"
       t.datetime "created_at"
       t.datetime "updated_at"
       t.integer  "parent_id"
@@ -218,6 +326,7 @@ class Rollup < ActiveRecord::Migration
       t.text     "body"
       t.boolean  "share_email",  :default => false
       t.integer  "wall_id"
+      t.integer  "to_person_id"
       t.integer  "code"
       t.integer  "site_id"
       t.text     "html_body"
@@ -248,7 +357,6 @@ class Rollup < ActiveRecord::Migration
       t.datetime "created_at"
       t.datetime "updated_at"
       t.string   "original_url"
-      t.boolean  "deleted",      :default => false
       t.integer  "group_id"
       t.integer  "site_id"
     end
@@ -265,35 +373,28 @@ class Rollup < ActiveRecord::Migration
       t.datetime "updated_at"
       t.boolean  "navigation", :default => true
       t.boolean  "system",     :default => false
+      t.boolean  "raw",        :default => false
     end
 
     add_index "pages", ["parent_id"], :name => "index_pages_on_parent_id"
     add_index "pages", ["path"], :name => "index_pages_on_path"
 
     create_table "people", :force => true do |t|
-      t.integer  "legacy_id"
       t.integer  "family_id"
       t.integer  "sequence"
       t.string   "gender",                       :limit => 6
       t.string   "first_name"
       t.string   "last_name"
-      t.string   "suffix",                       :limit => 25
       t.string   "mobile_phone",                 :limit => 25
       t.string   "work_phone",                   :limit => 25
       t.string   "fax",                          :limit => 25
       t.datetime "birthday"
       t.string   "email"
-      t.boolean  "email_changed",                               :default => false
       t.string   "website"
-      t.string   "classes"
+      t.text     "classes"
       t.string   "shepherd"
       t.string   "mail_group",                   :limit => 1
       t.string   "encrypted_password",           :limit => 100
-      t.string   "business_name",                :limit => 100
-      t.text     "business_description"
-      t.string   "business_phone",               :limit => 25
-      t.string   "business_email"
-      t.string   "business_website"
       t.text     "activities"
       t.text     "interests"
       t.text     "music"
@@ -303,18 +404,26 @@ class Rollup < ActiveRecord::Migration
       t.text     "quotes"
       t.text     "about"
       t.text     "testimony"
-      t.boolean  "share_mobile_phone"
-      t.boolean  "share_work_phone"
-      t.boolean  "share_fax"
-      t.boolean  "share_email"
-      t.boolean  "share_birthday"
+      t.boolean  "share_mobile_phone",                          :default => false
+      t.boolean  "share_work_phone",                            :default => false
+      t.boolean  "share_fax",                                   :default => false
+      t.boolean  "share_email",                                 :default => false
+      t.boolean  "share_birthday",                              :default => true
+      t.string   "business_name",                :limit => 100
+      t.text     "business_description"
+      t.string   "business_phone",               :limit => 25
+      t.string   "business_email"
+      t.string   "business_website"
+      t.integer  "legacy_id"
+      t.boolean  "email_changed",                               :default => false
+      t.string   "suffix",                       :limit => 25
       t.datetime "anniversary"
       t.datetime "updated_at"
       t.string   "alternate_email"
       t.integer  "email_bounces",                               :default => 0
       t.string   "business_category",            :limit => 100
       t.boolean  "get_wall_email",                              :default => true
-      t.boolean  "account_frozen",                              :default => false
+      t.boolean  "account_frozen"
       t.boolean  "wall_enabled"
       t.boolean  "messages_enabled",                            :default => true
       t.string   "business_address"
@@ -333,8 +442,12 @@ class Rollup < ActiveRecord::Migration
       t.boolean  "full_access",                                 :default => false
       t.integer  "legacy_family_id"
       t.string   "feed_code",                    :limit => 50
-      t.boolean  "share_activity"
+      t.boolean  "share_activity",                              :default => true
       t.integer  "site_id"
+      t.string   "can_pick_up",                  :limit => 100
+      t.string   "cannot_pick_up",               :limit => 100
+      t.string   "medical_notes",                :limit => 200
+      t.boolean  "checkin_access",                              :default => false
       t.string   "twitter_account",              :limit => 100
       t.string   "api_key",                      :limit => 50
       t.string   "salt",                         :limit => 50
@@ -342,11 +455,24 @@ class Rollup < ActiveRecord::Migration
       t.boolean  "child"
       t.string   "custom_type",                  :limit => 100
       t.text     "custom_fields"
-      t.boolean  "include_family_on_calendar",                  :default => true
+      t.string   "relationships_hash",           :limit => 40
+      t.integer  "donortools_id"
+      t.boolean  "synced_to_donortools",                        :default => false
+      t.string   "photo_file_name"
+      t.string   "photo_content_type"
+      t.string   "photo_fingerprint",            :limit => 50
+      t.integer  "photo_file_size"
+      t.datetime "photo_updated_at"
+      t.string   "description",                  :limit => 25
+      t.boolean  "share_anniversary",                           :default => true
+      t.boolean  "share_address",                               :default => true
+      t.boolean  "share_home_phone",                            :default => true
     end
 
-    add_index "people", ["classes"], :name => "index_people_on_classes"
+    add_index "people", ["admin_id"], :name => "index_admin_id_on_people"
+    add_index "people", ["business_category"], :name => "index_business_category_on_people"
     add_index "people", ["family_id"], :name => "index_people_on_family_id"
+    add_index "people", ["site_id"], :name => "index_site_id_on_people"
 
     create_table "people_verses", :id => false, :force => true do |t|
       t.integer "person_id"
@@ -356,11 +482,19 @@ class Rollup < ActiveRecord::Migration
     create_table "pictures", :force => true do |t|
       t.integer  "person_id"
       t.datetime "created_at"
-      t.boolean  "cover",      :default => false
+      t.boolean  "cover",                              :default => false, :null => false
       t.datetime "updated_at"
       t.integer  "site_id"
       t.integer  "album_id"
+      t.string   "original_url",       :limit => 1000
+      t.string   "photo_file_name"
+      t.string   "photo_content_type"
+      t.string   "photo_fingerprint",  :limit => 50
+      t.integer  "photo_file_size"
+      t.datetime "photo_updated_at"
     end
+
+    add_index "pictures", ["album_id"], :name => "index_pictures_on_album_id"
 
     create_table "prayer_requests", :force => true do |t|
       t.integer  "group_id"
@@ -373,6 +507,21 @@ class Rollup < ActiveRecord::Migration
       t.integer  "site_id"
     end
 
+    create_table "prayer_signups", :force => true do |t|
+      t.integer  "person_id"
+      t.datetime "start"
+      t.datetime "created_at"
+      t.boolean  "reminded",                  :default => false
+      t.string   "other_name", :limit => 100
+      t.integer  "site_id"
+    end
+
+    create_table "processed_messages", :force => true do |t|
+      t.string   "header_message_id"
+      t.datetime "created_at"
+      t.datetime "updated_at"
+    end
+
     create_table "publications", :force => true do |t|
       t.string   "name"
       t.text     "description"
@@ -380,6 +529,12 @@ class Rollup < ActiveRecord::Migration
       t.string   "file"
       t.datetime "updated_at"
       t.integer  "site_id"
+      t.integer  "person_id"
+      t.string   "file_file_name"
+      t.string   "file_content_type"
+      t.string   "file_fingerprint",  :limit => 50
+      t.integer  "file_file_size"
+      t.datetime "file_updated_at"
     end
 
     create_table "recipes", :force => true do |t|
@@ -395,14 +550,34 @@ class Rollup < ActiveRecord::Migration
       t.string   "bake"
       t.integer  "serving_size"
       t.integer  "site_id"
+      t.string   "photo_file_name"
+      t.string   "photo_content_type"
+      t.string   "photo_fingerprint",  :limit => 50
+      t.integer  "photo_file_size"
+      t.datetime "photo_updated_at"
     end
 
-    create_table "remote_accounts", :force => true do |t|
-      t.integer "site_id"
-      t.integer "person_id"
-      t.string  "account_type", :limit => 25
-      t.string  "username"
-      t.string  "token",        :limit => 500
+    create_table "relationships", :force => true do |t|
+      t.integer  "person_id"
+      t.integer  "related_id"
+      t.string   "name"
+      t.string   "other_name"
+      t.integer  "site_id"
+      t.datetime "created_at"
+      t.datetime "updated_at"
+    end
+
+    create_table "reports", :force => true do |t|
+      t.integer  "site_id"
+      t.string   "name"
+      t.text     "definition"
+      t.boolean  "restricted",     :default => true
+      t.integer  "created_by_id"
+      t.integer  "run_count",      :default => 0
+      t.datetime "last_run_at"
+      t.integer  "last_run_by_id"
+      t.datetime "created_at"
+      t.datetime "updated_at"
     end
 
     create_table "service_categories", :force => true do |t|
@@ -427,7 +602,7 @@ class Rollup < ActiveRecord::Migration
       t.datetime "created_at"
     end
 
-    add_index "sessions", ["session_id"], :name => "index_sessions_on_session_id"
+    add_index "sessions", ["session_id"], :name => "sessions_session_id_index"
 
     create_table "settings", :force => true do |t|
       t.string   "section",     :limit => 100
@@ -457,25 +632,69 @@ class Rollup < ActiveRecord::Migration
       t.integer  "max_admins"
       t.integer  "max_people"
       t.integer  "max_groups"
-      t.boolean  "import_export_enabled", :default => true
-      t.boolean  "pages_enabled",         :default => true
-      t.boolean  "pictures_enabled",      :default => true
-      t.boolean  "publications_enabled",  :default => true
-      t.boolean  "active",                :default => true
-      t.boolean  "twitter_enabled",       :default => false
+      t.boolean  "import_export_enabled",               :default => true
+      t.boolean  "pages_enabled",                       :default => true
+      t.boolean  "pictures_enabled",                    :default => true
+      t.boolean  "publications_enabled",                :default => true
+      t.boolean  "active",                              :default => true
+      t.boolean  "twitter_enabled",                     :default => false
+      t.string   "external_guid",                       :default => "0"
+      t.datetime "settings_changed_at"
+      t.string   "logo_file_name"
+      t.string   "logo_content_type"
+      t.string   "logo_fingerprint",      :limit => 50
+      t.integer  "logo_file_size"
+      t.datetime "logo_updated_at"
     end
 
     add_index "sites", ["host"], :name => "index_sites_on_host"
 
-    create_table "sync_instances", :force => true do |t|
+    create_table "stream_items", :force => true do |t|
       t.integer  "site_id"
-      t.integer  "owner_id"
+      t.string   "title",           :limit => 500
+      t.text     "body"
+      t.text     "context"
       t.integer  "person_id"
-      t.integer  "remote_id"
-      t.integer  "remote_account_id"
-      t.string   "account_type",      :limit => 25
+      t.integer  "group_id"
+      t.integer  "streamable_id"
+      t.string   "streamable_type"
       t.datetime "created_at"
       t.datetime "updated_at"
+      t.integer  "wall_id"
+      t.boolean  "shared"
+      t.boolean  "text",                           :default => false
+    end
+
+    add_index "stream_items", ["created_at"], :name => "index_stream_items_on_created_at"
+    add_index "stream_items", ["group_id"], :name => "index_stream_items_on_group_id"
+    add_index "stream_items", ["person_id"], :name => "index_stream_items_on_person_id"
+    add_index "stream_items", ["streamable_type", "streamable_id"], :name => "index_stream_items_on_streamable_type_and_streamable_id"
+
+    create_table "sync_items", :force => true do |t|
+      t.integer "site_id"
+      t.integer "sync_id"
+      t.integer "syncable_id"
+      t.string  "syncable_type"
+      t.integer "legacy_id"
+      t.string  "name"
+      t.string  "operation",      :limit => 50
+      t.string  "status",         :limit => 50
+      t.text    "error_messages"
+    end
+
+    add_index "sync_items", ["sync_id"], :name => "index_sync_id_on_sync_items"
+    add_index "sync_items", ["syncable_type", "syncable_id"], :name => "index_syncable_on_sync_items"
+
+    create_table "syncs", :force => true do |t|
+      t.integer  "site_id"
+      t.integer  "person_id"
+      t.boolean  "complete",      :default => false
+      t.integer  "success_count"
+      t.integer  "error_count"
+      t.datetime "created_at"
+      t.datetime "updated_at"
+      t.datetime "started_at"
+      t.datetime "finished_at"
     end
 
     create_table "taggings", :force => true do |t|
@@ -533,11 +752,11 @@ class Rollup < ActiveRecord::Migration
     add_index "updates", ["person_id"], :name => "index_updates_on_person_id"
 
     create_table "verifications", :force => true do |t|
-      t.string   "email"
-      t.string   "mobile_phone", :limit => 25
-      t.integer  "code"
       t.boolean  "verified"
       t.datetime "created_at"
+      t.string   "email"
+      t.integer  "code"
+      t.string   "mobile_phone", :limit => 25
       t.datetime "updated_at"
       t.integer  "site_id"
     end

@@ -1,7 +1,7 @@
 source 'http://rubygems.org'
 
 gem 'rails',                  '~> 3.0.3'
-gem 'mysql',                  '~> 2.8.1'
+gem 'pg',                     '~> 0.10.0'
 gem 'liquid',                 '~> 2.2.2'
 gem 'jquery-rails',           '~> 0.2.4'
 gem 'will_paginate',          '~> 3.0.pre2'

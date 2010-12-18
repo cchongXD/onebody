@@ -15,7 +15,7 @@ class Search
   def name=(name)
     if name
       name.gsub! /\sand\s/, ' & '
-      @conditions.add_condition ["(#{sql_concat('people.first_name', %q(' '), 'people.last_name')} like ? or (#{name.index('&') ? '1=1' : '1=0'} and families.name like ?) or (people.first_name like ? and people.last_name like ?))", "%#{name}%", "%#{name}%", "#{name.split.first}%", "#{name.split.last}%"]
+      @conditions.add_condition ["(#{sql_concat('people.first_name', %q(' '), 'people.last_name')} #{sql_ilike} ? or (#{name.index('&') ? '1=1' : '1=0'} and families.name #{sql_ilike} ?) or (people.first_name #{sql_ilike} ? and people.last_name #{sql_ilike} ?))", "%#{name}%", "%#{name}%", "#{name.split.first}%", "#{name.split.last}%"]
     end
   end
 
@@ -23,9 +23,9 @@ class Search
     @family_name = family_name
     if family_name
       family_name.gsub! /\sand\s/, ' & '
-      family_ids = Person.connection.select_values("select distinct family_id from people where #{sql_concat('people.first_name', %q(' '), 'people.last_name')} like #{Person.connection.quote(family_name + '%')} and site_id = #{Site.current.id}").map { |id| id.to_i }
+      family_ids = Person.connection.select_values("select distinct family_id from people where #{sql_concat('people.first_name', %q(' '), 'people.last_name')} #{sql_ilike} #{Person.connection.quote(family_name + '%')} and site_id = #{Site.current.id}").map { |id| id.to_i }
       family_ids = [0] unless family_ids.any?
-      @conditions.add_condition ["(families.name like ? or families.last_name like ? or families.id in (?))", "%#{family_name}%", "%#{family_name}%", family_ids]
+      @conditions.add_condition ["(families.name #{sql_ilike} ? or families.last_name #{sql_ilike} ? or families.id in (?))", "%#{family_name}%", "%#{family_name}%", family_ids]
     end
   end
 
@@ -51,9 +51,9 @@ class Search
   def address=(addr)
     addr.symbolize_keys! if addr.respond_to?(:symbolize_keys!)
     addr.reject_blanks!
-    @conditions.add_condition ["#{sql_lcase('families.city')} LIKE ?", "#{addr[:city].downcase}%"] if addr[:city]
-    @conditions.add_condition ["#{sql_lcase('families.state')} LIKE ?", "#{addr[:state].downcase}%"] if addr[:state]
-    @conditions.add_condition ["families.zip like ?", "#{addr[:zip]}%"] if addr[:zip]
+    @conditions.add_condition ["lower(families.city) LIKE ?", "#{addr[:city].downcase}%"] if addr[:city]
+    @conditions.add_condition ["lower(families.state) LIKE ?", "#{addr[:state].downcase}%"] if addr[:state]
+    @conditions.add_condition ["families.zip #{sql_ilike} ?", "#{addr[:zip]}%"] if addr[:zip]
     @search_address = addr.any?
   end
 
@@ -76,7 +76,7 @@ class Search
   def favorites=(favs)
     favs.reject! { |n, v| not %w(activities interests music tv_shows movies books).include? n.to_s or v.to_s.empty? }
     favs.each do |name, value|
-      @conditions.add_condition ["people.#{name.to_s} like ?", "%#{value}%"]
+      @conditions.add_condition ["people.#{name.to_s} #{sql_ilike} ?", "%#{value}%"]
     end
   end
 
@@ -106,16 +106,10 @@ class Search
     unless show_hidden and Person.logged_in.admin?(:view_hidden_profiles)
       @conditions.add_condition ["people.visible_to_everyone = ?", true]
       @conditions.add_condition ["(people.visible = ? and families.visible = ?)", true, true]
-      unless SQLITE
-        @conditions.add_condition ["(people.child = ? or (birthday is not null and adddate(birthday, interval 13 year) <= curdate()) or (people.parental_consent is not null and people.parental_consent != ''))", false]
-      end
+      @conditions.add_condition ["(people.child = ? or (birthday is not null and #{sql_adddate('birthday', '13 years')} <= #{sql_curdate}) or (people.parental_consent is not null and people.parental_consent != ''))", false]
     end
     unless Person.logged_in.full_access?
-      if SQLITE
-        @conditions.add_condition ["#{sql_now}-people.birthday >= 18"]
-      else
-        @conditions.add_condition ["DATE_ADD(people.birthday, INTERVAL 18 YEAR) <= CURDATE()"]
-      end
+      @conditions.add_condition ["#{sql_adddate('people.birthday', '18 years')} <= #{sql_curdate}"]
     end
     if @type
       if %w(member staff deacon elder).include?(@type)

@@ -1,29 +1,72 @@
 def sql_concat(*args)
-  SQLITE ? args.join(' || ') : "CONCAT(#{args.join(', ')})"
+  case DB_ADAPTER
+  when 'mysql'
+    "CONCAT(#{args.join(', ')})"
+  when 'postgres'
+    args.join(' || ')
+  end
 end
 
-def sql_lcase(expr)
-  SQLITE ? "LOWER(#{expr})" : "LCASE(#{expr})"
+def sql_date_part(expr, part)
+  case DB_ADAPTER
+  when 'mysql'
+    "#{part}(#{expr})"
+  when 'postgres'
+    "date_part('#{part}', #{expr})"
+  end
 end
 
 def sql_year(expr)
-  SQLITE ? "CAST(STRFTIME('%y', #{expr}) as 'INTEGER')" : "YEAR(#{expr})"
+  sql_date_part(expr, 'year')
 end
 
 def sql_month(expr)
-  SQLITE ? "CAST(STRFTIME('%m', #{expr}) as 'INTEGER')" : "MONTH(#{expr})"
+  sql_date_part(expr, 'month')
 end
 
 def sql_day(expr)
-  SQLITE ? "CAST(STRFTIME('%d', #{expr}) as 'INTEGER')" : "DAY(#{expr})"
+  sql_date_part(expr, 'day')
 end
 
 def sql_now
-  SQLITE ? "CURRENT_TIMESTAMP" : "NOW()"
+  "now()"
 end
 
 def sql_random
-  SQLITE ? "RANDOM()" : "RAND()"
+  case DB_ADAPTER
+  when 'mysql'
+    "rand()"
+  when 'postgres'
+    "random()"
+  end
+end
+
+def sql_adddate(expr, interval)
+  case DB_ADAPTER
+  when 'mysql'
+    "adddate(#{expr}, interval #{interval.sub(/s$/i, '')})"
+  when 'postgres'
+    "#{expr} + cast('#{interval}' as interval)"
+  end
+end
+
+def sql_curdate
+  case DB_ADAPTER
+  when 'mysql'
+    "curdate()"
+  when 'postgres'
+    "current_date"
+  end
+end
+
+def sql_ilike
+  case DB_ADAPTER
+  when 'mysql'
+    # like is case insensitive in MySQL by default
+    "like"
+  when 'postgres'
+    "ilike"
+  end
 end
 
 class ActiveRecord::Base
