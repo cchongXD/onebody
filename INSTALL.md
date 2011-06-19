@@ -38,7 +38,7 @@ For **Windows** workstations, grab the 1.8.7 RubyInstaller from [here](http://ru
 Log out and back in for the changes to take effect. Typing `type rvm | head -n1` should display
 "rvm is a function".
 
-See http://rvm.beginrescueend.com/rvm/install/ for more detailed instructions.
+**See http://rvm.beginrescueend.com/rvm/install/ and make sure your .bashrc doesn't exit near the top.**
 
 _Be sure to configure your firewall to allow access to your SSH server from your workstation._
 
@@ -132,6 +132,10 @@ _Don't forget to point a DNS MX record at your server's IP address for incoming 
 ## Upgrade Steps
 
 **Backup your MySQL database and your `db` directory first!**
+
+### Upgrade Notes
+
+Check the Google Group for details on specific releases. I try to send a message whenever I run into notable issues.
 
 There are a few different ways to upgrade your existing OneBody install, depending on how you installed the software originally...
 

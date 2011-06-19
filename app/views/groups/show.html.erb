@@ -32,6 +32,29 @@
     <% end %>
   <% end %>
 
+  <% if @group.attendance? and (@logged_in.can_edit?(@group) or @logged_in.admin?(:manage_attendance)) %>
+    <p>
+      <%= link_to t('groups.attendance'), group_attendance_index_path(@group), :class => 'people-icon' %>
+    </p>
+  <% end %>
+
+  <% if @logged_in.can_edit?(@group) %>
+    <p>
+      <%= link_to t('groups.birthdays'), birthdays_group_memberships_path(@group), :class => 'people-icon' %>
+    </p>
+  <% end %>
+
+  <% if @group.attachments.count > 0 %>
+    <h3><%= t('attachments.files') %></h3>
+    <table class="spaced">
+      <% @group.attachments.all(:order => 'name').each do |attachment| %>
+        <tr>
+          <td><%= link_to attachment.name, get_attachment_path(attachment) %></td>
+          <td><%= attachment.created_at.to_s(:date) %></td>
+        </tr>
+      <% end %>
+    </table>
+  <% end %>
 
   <% cache(:fragment => 'members') do %>
     <h3><%= t('groups.members') %></h3>
@@ -47,7 +70,8 @@
 
   <p class="margin-top">
     <% if @logged_in.can_edit?(@group) %>
-      <%= link_to t('groups.edit_members'), group_memberships_path(@group), :class => 'edit-icon discreet' %>
+      <%= link_to t('groups.edit_members'), group_memberships_path(@group), :class => 'edit-icon discreet' %><br/>
+      <%= link_to t('groups.edit_group'), edit_group_path(@group), :class => 'edit-icon discreet' %>
     <% else %>
       <%= link_to t('groups.view_members'), group_memberships_path(@group), :class => 'discreet' %>
     <% end %>
@@ -95,7 +119,7 @@
 
 <% if @show_cal %>
   <div id="cal-container">
-    <iframe src="<%= @group.gcal_url %>" style="border: 0" width="600" height="400" frameborder="0"></iframe>
+    <iframe src="<%=raw @group.gcal_url %>" style="border: 0" width="600" height="400" frameborder="0"></iframe>
   </div>
 <% end %>
 
@@ -115,11 +139,13 @@
       <li class="cancel-link"><%= link_to_function '', 'hideShare()', :class =>  'delete-icon' %></li>
     </ul>
     <% if @group.email? %>
-      <%= form_for Message.new(:group => @group), :html => {:id => 'share-email', :class => 'share-type'} do |form| %>
+      <%= form_for Message.new(:group => @group), :html => {:enctype => 'multipart/form-data', :id => 'share-email', :class => 'share-type'} do |form| %>
         <%= form.hidden_field :group_id %>
         <%= form.text_field :subject, :size => 50 %>
         <%= form.text_area :body, :rows => 5 %><br/>
-        <%= submit_tag t('share.share') %>
+        <label for="file" class="inline"><%= t('messages.attachment_optional') %>:</label>
+        <input type="file" id="file" name="files[]" multiple="multiple"/><br/>
+        <%= submit_tag t('messages.send_message') %>
       <% end %>
     <% end %>
     <% if @group.prayer? %>

@@ -64,8 +64,8 @@ class MembershipsController < ApplicationController
   def destroy
     @group = Group.find(params[:group_id])
     @membership = @group.memberships.find_by_person_id(params[:id])
-    if @logged_in.can_edit?(@group) or @membership.person == @logged_in
-      if @group.last_admin?(@membership.person)
+    if @logged_in.can_edit?(@group) or @membership.try(:person) == @logged_in
+      if @membership.person and @group.last_admin?(@membership.person)
         flash[:warning] = t('groups.last_admin_remove', :name => @membership.person.name)
       else
         @membership.destroy
@@ -134,6 +134,15 @@ class MembershipsController < ApplicationController
       else
         render :text => t('groups.must_specify_ids_list')
       end
+    else
+      render :text => t('not_authorized'), :layout => true, :status => 401
+    end
+  end
+
+  def birthdays
+    @group = Group.find(params[:group_id])
+    if @logged_in.can_edit?(@group)
+      @people = @group.people.where('birthday is not null').order("#{sql_month 'people.birthday'}, #{sql_day 'people.birthday'}, people.last_name, people.first_name")
     else
       render :text => t('not_authorized'), :layout => true, :status => 401
     end

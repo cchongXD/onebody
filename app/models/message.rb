@@ -27,6 +27,12 @@ class Message < ActiveRecord::Base
     end
   end
 
+  validates_each :body do |record, attribute, value|
+    if attribute.to_s == 'body' and value.to_s.blank? and record.html_body.to_s.blank?
+      record.errors.add attribute, :blank
+    end
+  end
+
   acts_as_logger LogItem
 
   def name
@@ -52,7 +58,23 @@ class Message < ActiveRecord::Base
   before_save :remove_unsubscribe_link
 
   def remove_unsubscribe_link
-    body.gsub! /http:\/\/.*?person_id=\d+&code=\d+/i, '--removed--'
+    if body
+      body.gsub! /http:\/\/.*?person_id=\d+&code=\d+/i, '--removed--'
+    end
+    if html_body
+      html_body.gsub! /http:\/\/.*?person_id=\d+&code=\d+/i, '--removed--'
+    end
+  end
+
+  before_save :remove_message_id_in_body
+
+  def remove_message_id_in_body
+    if body
+      body.gsub! MESSAGE_ID_RE_IN_BODY, ''
+    end
+    if html_body
+      html_body.gsub! MESSAGE_ID_RE_IN_BODY, ''
+    end
   end
 
   validate :on => :create do |record|

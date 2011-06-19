@@ -25,32 +25,38 @@ class AccountsController < ApplicationController
 
   def create
     if params[:person] and Setting.get(:features, :sign_up) and params[:phone].blank? # phone is to catch bots (hidden field)
-      if Person.find_by_email(params[:person][:email])
-        params[:email] = params[:person][:email]
-        create_by_email
-      else
-        attributes = {:can_sign_in => false, :full_access => false, :visible_to_everyone => false}
-        attributes.merge! params[:person].reject { |k, v| !%w(email first_name last_name gender birthday).include?(k) }
-        @person = Person.new(attributes)
-        if @person.adult?
-          if @person.save
-            @person.family = Family.create(:name => @person.name, :last_name => @person.last_name)
-            if Setting.get(:features, :sign_up_approval_email).to_s.any?
-              @person.save
-              Notifier.pending_sign_up(@person).deliver
-              render :text => t('accounts.pending_approval'), :layout => true
+      if params[:person][:email].to_s.any?
+        if Person.find_by_email(params[:person][:email])
+          params[:email] = params[:person][:email]
+          create_by_email
+        else
+          attributes = {:can_sign_in => false, :full_access => false, :visible_to_everyone => false}
+          attributes.merge! params[:person].reject { |k, v| !%w(email first_name last_name gender birthday).include?(k) }
+          @person = Person.new(attributes)
+          if @person.adult?
+            if @person.save
+              @person.family = Family.create(:name => @person.name, :last_name => @person.last_name)
+              if Setting.get(:features, :sign_up_approval_email).to_s.any?
+                @person.save
+                Notifier.pending_sign_up(@person).deliver
+                render :text => t('accounts.pending_approval'), :layout => true
+              else
+                @person.update_attributes!(:can_sign_in => true, :full_access => true, :visible_to_everyone => true, :visible_on_printed_directory => true)
+                params[:email] = @person.email
+                create_by_email
+              end
             else
-              @person.update_attributes!(:can_sign_in => true, :full_access => true, :visible_to_everyone => true, :visible_on_printed_directory => true)
-              params[:email] = @person.email
-              create_by_email
+              render :action => 'new'
             end
           else
+            @person.errors.add(:base, t('accounts.must_be_of_age', :years => Setting.get(:system, :adult_age)))
             render :action => 'new'
           end
-        else
-          @person.errors.add(:base, t('accounts.must_be_of_age', :years => Setting.get(:system, :adult_age)))
-          render :action => 'new'
         end
+      else
+        @person = Person.new
+        @person.errors.add(:email, :invalid)
+        render :action => 'new'
       end
     elsif params[:name].to_s.any? and params[:email].to_s.any? and params[:phone].to_s.any? and params[:birthday].to_s.any? and params[:notes].to_s.any?
       create_by_birthday
@@ -108,6 +114,7 @@ class AccountsController < ApplicationController
         end
       else
         flash[:warning] = t('accounts.mobile_number_not_found')
+        @person = Person.new
         render :action => 'new'
       end
     end
@@ -118,6 +125,7 @@ class AccountsController < ApplicationController
         render :text => t('accounts.submission_will_be_reviewed'), :layout => true
       else
         flash[:warning] = t('accounts.fill_required_fields')
+        @person = Person.new
         render :action => 'new'
       end
     end
@@ -150,12 +158,13 @@ class AccountsController < ApplicationController
           else
             flash[:warning] = t('accounts.set_your_email_may_be_different')
           end
+          v.update_attribute :verified, true
           redirect_to edit_person_account_path(person.id)
         else
           session[:select_from_people] = @people
+          v.update_attribute :verified, true
           redirect_to select_account_path
         end
-        v.update_attribute :verified, true
       else
         v.update_attribute :verified, false
         render :text => t('accounts.wrong_code'), :layout => true, :status => 500

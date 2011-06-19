@@ -1,6 +1,6 @@
 source 'http://rubygems.org'
 
-gem 'rails',                  '~> 3.0.3'
+gem 'rails',                  '~> 3.0.7'
 gem 'pg',                     '~> 0.10.0'
 gem 'liquid',                 '~> 2.2.2'
 gem 'jquery-rails',           '~> 0.2.4'
@@ -22,7 +22,4 @@ gem 'paperclip',              '~> 2.3.6'
 group :development, :test do
   gem 'faker',                '~> 0.3.1'
   gem 'shoulda',              '~> 2.11.3'
-  gem 'webrat', :git => 'git://github.com/seven1m/webrat.git'
-  gem 'selenium-client', :require => 'selenium/client'
-  gem 'mongrel'
 end

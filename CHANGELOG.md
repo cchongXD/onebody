@@ -6,6 +6,54 @@ This document lists notable changes in each release, in no particular order
 
 For detailed change history, view the Git log (http://github.com/seven1m/onebody/commits).
 
+2.1.1 / March 20, 2011
+----------------------
+
+* Remove dependence on local RVM install for deployment.
+
+2.1.0 / March 19, 2011
+----------------------
+
+* Parse birthday based on locale.
+* Add link to edit group on group page.
+* New page for group admins to see birthdays of members.
+* Update gems.
+* Fix schedule (crontab) and added instructions for proper RVM setup.
+* Fixes for deployment recipes and newer RVM and Capistrano versions.
+* Fix bug deleting group membership for deleted person.
+* Fix bug deleting cached stream items on deleted people.
+* Fix views failing due to deleted person.
+* Fix bug saving boolean settings.
+* Fix bug saving pages.
+* Fix typo in photo content type.
+* Fix for uploading photos with invalid type.
+* Fix error when rendering error for new account.
+* Fix runner call for pc\_sync background process
+
+2.0.1 / February 8, 2011
+------------------------
+
+* Upgraded to Rails 3.0.4 to fix multiple security vulnerabilities.
+* Fix bug showing help when no users are present in the db.
+* Partial fix for bug syncing with PowerChurch.
+
+2.0.0 Final / January 26, 2011
+------------------------------
+
+* Relaxed html sanitization.
+* Remove tag name restrictions.
+* Fix reference to wrong gemset in .rvmrc.
+* Fix message creation where body is blank.
+* Fix missing attachment field on group email form.
+* Fix child-select field when editing a profile.
+* Fix bug with birthday verification email.
+* Fix bug with some auto-reply email.
+* Fix group calendar bug.
+* Fix attendance page appearance.
+* Fix missing link to group attendance page.
+* Fix handling of dates in profile updates.
+* Fix all broken unit and functional tests.
+
 2.0.0 Beta 2 / December 17, 2010
 --------------------------------
 

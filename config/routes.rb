@@ -79,6 +79,7 @@ OneBody::Application.routes.draw do
     end
     resources :memberships do
       collection do
+        get    :birthdays
         post   :batch
         delete :batch
       end
@@ -134,8 +135,10 @@ OneBody::Application.routes.draw do
     resources :attachments
   end
 
+  resources :tags, :only => :show
+
   resources :pictures, :prayer_signups, :authentications, :feeds, :verses, :shares,
-            :publications, :notes, :tags, :comments, :prayer_requests, :podcasts,
+            :publications, :notes, :comments, :prayer_requests, :podcasts,
             :generated_files
 
   resource  :setup, :stream, :session, :search, :printable_directory, :privacy, :pc_sync
