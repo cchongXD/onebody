@@ -102,7 +102,7 @@ module ApplicationHelper
       html << "<li>#{ tab_link t("nav.groups"), groups_path, params[:controller] == 'groups', 'group-tab'}</li>"
     end
     html << "<li>#{tab_link t("nav.directory"), new_search_path, %w(searches printable_directories).include?(params[:controller]), 'directory-tab'}</li>"
-    html
+    html.html_safe
   end
 
   def common_nav_links
@@ -112,7 +112,7 @@ module ApplicationHelper
       html << "<li>#{link_to t("admin.admin"), admin_path}</li>" if @logged_in.admin?
       html << "<li>#{link_to t("session.sign_out"), session_path, :method => :delete}</li>"
     end
-    html
+    html.html_safe
   end
 
   def menu_content

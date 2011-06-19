@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-  <title>{{ site_name }}</title>
-  {{ head_tags }}
-  {{ stylesheet_tags }}
-  {{ javascript_tags }}
-  {{ content_for_head }}
+  <title><%= @site_name %></title>
+  <%= head_tags %>
+  <%= stylesheet_tags %>
+  <%= javascript_tags %>
+  <%= yield :head %>
 </head>
 <body>
   <div id="common" class="shadowed">
     <div class="inner">
       <div id="search">
-        {{ search_form }}
+        <%= search_form %>
       </div>
       <ul id="common-nav">
-        {{ common_nav_links }}
+        <%= common_nav_links %>
       </ul>
       <div class="clear"></div>
     </div>
@@ -22,37 +22,37 @@
   <div id="nav">
     <div class="inner">
       <ul class="buttons">
-        {{ nav_links }}
+        <%= nav_links %>
       </ul>
       <div class="heading">
-        <h1>{{ heading }}</h1>
-        <div class="tagline">{{ subheading }}</div>
+        <h1><%= heading %></h1>
+        <div class="tagline"><%= subheading %></div>
       </div>
     </div>
   </div>
-  {{ notice }}
+  <%= notice %>
   <div id="main">
     <div class="inner">
-      {% if content_for_sidebar %}
+      <% if (@sidebar = yield(:sidebar)).to_s.any? %>
         <div class="left-sidebar">
-          {{ content_for_sidebar }}
+          <%= @sidebar %>
         </div>
         <div class="accommodate-left-sidebar">
-          {{ content_for_layout }}
+          <%= yield %>
         </div>
         <div class="clear"></div>
-      {% else %}
-        {{ content_for_layout }}
-      {% endif %}
+      <% else %>
+        <%= yield %>
+      <% end %>
     </div>
   </div>
   <div class="inner">
     <div id="footer">
-      {{ footer_content }}
+      <%= footer_content %>
     </div>
   </div>
-  {{ news_js }}
-  {{ analytics_js }}
-  {{ menu_content }}
+  <%= news_js %>
+  <%= analytics_js %>
+  <%= menu_content %>
 </body>
 </html>
