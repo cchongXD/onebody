@@ -10,6 +10,7 @@ config/database.yml
 config/database.yml.backup
 config/deploy.rb
 config/email.yml
+config/s3.yml
 config/locale
 public/images/logo*
 public/system/production
