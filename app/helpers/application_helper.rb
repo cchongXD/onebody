@@ -127,8 +127,8 @@ module ApplicationHelper
 
   def notice
     if flash[:warning] or flash[:notice]
-      <<-HTML
-        <div id="notice" #{flash[:warning] ? 'class="warning"' : nil}>#{flash[:warning] || flash[:notice]}</div>
+      <<-HTML.html_safe
+        <div id="notice" #{flash[:warning] ? 'class="warning"' : nil}>#{h flash[:warning] || flash[:notice]}</div>
         <script type="text/javascript">
           #{flash[:sticky_notice] ? '' : "$('#notice').fadeOut(15000);"}
         </script>
@@ -137,9 +137,11 @@ module ApplicationHelper
   end
 
   def footer_content
-    "&copy; #{Date.today.year}, #{Setting.get(:name, :community)} &middot; " + \
-    "<a href=\"/pages/help/privacy_policy\">#{t('layouts.privacy_policy')}</a> &middot; " + \
-    t('layouts.powered_by_html')
+    (
+      "&copy; #{Date.today.year}, #{Setting.get(:name, :community)} &middot; " + \
+      "<a href=\"/pages/help/privacy_policy\">#{t('layouts.privacy_policy')}</a> &middot; " + \
+      t('layouts.powered_by_html')
+    ).html_safe
   end
 
   def news_js
