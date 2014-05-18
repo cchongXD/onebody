@@ -1,30 +1,29 @@
 class Notifier < ActionMailer::Base
   helper :notifier, :application
 
-  default :from    => lambda { Site.current.noreply_email },
-          :charset => 'UTF-8'
+  default from: -> _ { Site.current.noreply_email }, charset: 'UTF-8'
 
   def profile_update(person, updates)
     @person = person
     @updates = updates
     mail(
-      :to      => Setting.get(:contact, :send_updates_to),
-      :subject => "Profile Update from #{person.name}."
+      to:      Setting.get(:contact, :send_updates_to),
+      subject: "Profile Update from #{person.name}."
     )
   end
 
   def email_update(person)
     @person = person
     mail(
-      :to      => Setting.get(:contact, :send_email_changes_to),
-      :subject => "#{person.name} Changed Email"
+      to:      Setting.get(:contact, :send_email_changes_to),
+      subject: "#{person.name} Changed Email"
     )
   end
 
   def date_and_time_report
     mail(
-      :to      => Setting.get(:contact, :tech_support_email),
-      :subject => "Date & Time Incorrect"
+      to:      Setting.get(:contact, :tech_support_email),
+      subject: "Date & Time Incorrect"
     )
   end
 
@@ -32,8 +31,8 @@ class Notifier < ActionMailer::Base
     @person = person
     @friend = friend
     mail(
-      :to      => "\"#{friend.name}\" <#{friend.email}>",
-      :subject => "Friend Request from #{person.name}"
+      to:      "\"#{friend.name}\" <#{friend.email}>",
+      subject: "Friend Request from #{person.name}"
     )
   end
 
@@ -41,14 +40,14 @@ class Notifier < ActionMailer::Base
     @group = group
     @person = person
     unless (to = group.admins.select { |p| p.email.to_s.any? }.map { |p| "#{p.name} <#{p.email}>" }).any?
-      unless (to = Admin.all.select { |a| a.manage_updates? }.map { |a| "#{a.person.name} <#{a.person.email}>" }).any?
-        to = Admin.find_all_by_super_admin(true).map { |a| a.person.email }
+      unless (to = Admin.to_a.select { |a| a.manage_updates? }.map { |a| "#{a.person.name} <#{a.person.email}>" }).any?
+        to = Admin.where(super_admin: true).map { |a| a.person.email }
       end
     end
     mail(
-      :to      => to,
-      :from    => person.email.to_s.any? ? "\"#{person.name}\" <#{person.email}>" : Site.current.noreply_email,
-      :subject => "Request to Join Group from #{person.name}"
+      to:      to,
+      from:    person.email.to_s.any? ? "\"#{person.name}\" <#{person.email}>" : Site.current.noreply_email,
+      subject: "Request to Join Group from #{person.name}"
     )
   end
 
@@ -79,9 +78,9 @@ class Notifier < ActionMailer::Base
       attachments[a.name] = File.read(a.file.path)
     end
     mail(
-      :to      => to.email,
-      :from    => msg.email_from(to),
-      :subject => msg.subject
+      to:      to.email,
+      from:    msg.email_from(to),
+      subject: msg.subject
     ) do |format|
       if msg.body.to_s.any?
         format.text
@@ -96,35 +95,35 @@ class Notifier < ActionMailer::Base
   def simple_message(t, s, b, f=nil)
     headers 'Auto-Submitted' => 'auto-replied'
     mail(
-      :to      => t,
-      :from    => f || Site.current.noreply_email,
-      :subject => s
+      to:      t,
+      from:    f || Site.current.noreply_email,
+      subject: s
     ) do |format|
-      format.text { render :text => b }
+      format.text { render text: b }
     end
   end
 
   def prayer_reminder(person, times)
     @times = times
     mail(
-      :to      => person.email,
-      :subject => "24-7 Prayer: Don't Forget!"
+      to:      person.email,
+      subject: "24-7 Prayer: Don't Forget!"
     )
   end
 
   def email_verification(verification)
     @verification = verification
     mail(
-      :to      => verification.email,
-      :subject => "Verify Email"
+      to:      verification.email,
+      subject: "Verify Email"
     )
   end
 
   def mobile_verification(verification)
     @verification = verification
     mail(
-      :to      => verification.email,
-      :subject => "Verify Mobile"
+      to:      verification.email,
+      subject: "Verify Mobile"
     )
   end
 
@@ -135,17 +134,17 @@ class Notifier < ActionMailer::Base
     @birthday = birthday
     @notes    = notes
     mail(
-      :to      => Setting.get(:contact, :birthday_verification_email),
-      :from    => email,
-      :subject => "Birthday Verification"
+      to:      Setting.get(:contact, :birthday_verification_email),
+      from:    email,
+      subject: "Birthday Verification"
     )
   end
 
   def pending_sign_up(person)
     @person = person
     mail(
-      :to      => Setting.get(:features, :sign_up_approval_email),
-      :subject => "Pending Sign Up"
+      to:      Setting.get(:features, :sign_up_approval_email),
+      subject: "Pending Sign Up"
     )
   end
 
@@ -154,8 +153,8 @@ class Notifier < ActionMailer::Base
     # TODO check that it is ok that we don't specify content-type application/pdf here
     attachments['directory.pdf'] = file.read
     mail(
-      :to      => "\"#{person.name}\" <#{person.email}>",
-      :subject => "#{Setting.get(:name, :site)} Directory"
+      to:      "\"#{person.name}\" <#{person.email}>",
+      subject: "#{Setting.get(:name, :site)} Directory"
     )
   end
 
@@ -168,8 +167,8 @@ class Notifier < ActionMailer::Base
     return if sent_to.detect { |a| a =~ /no\-?reply|postmaster|mailer\-daemon/i }
     return if email.from.to_s =~ /no\-?reply|postmaster|mailer\-daemon/i
     return if email.subject =~ /^undelivered mail returned to sender|^returned mail|^delivery failure/i
-    return if email.message_id =~ Message::MESSAGE_ID_RE and m = Message.unscoped { Message.find_by_id($1) } and m.code_hash == $2 # just sent, looping back into the receiver
-    return if ProcessedMessage.find_by_header_message_id(email.message_id)
+    return if email.message_id =~ Message::MESSAGE_ID_RE and m = Message.unscoped { Message.where(id: $1).first } and m.code_hash == $2 # just sent, looping back into the receiver
+    return if ProcessedMessage.where(header_message_id: email.message_id).first
     return unless get_site(email)
 
     unless @person = get_from_person(email)
@@ -222,7 +221,7 @@ class Notifier < ActionMailer::Base
       address, domain = address.strip.downcase.split('@')
       next unless address.any? and domain.any?
       our_domain = [Site.current.host, Site.current.secondary_host].compact.include?(domain)
-      if our_domain and group = Group.find_by_address(address) and group.can_send?(@person)
+      if our_domain and group = Group.where(address: address).first and group.can_send?(@person)
         message = group_email(group, email, body)
         if @message_sent_to_group
           sent_to_count += 1
@@ -260,7 +259,7 @@ class Notifier < ActionMailer::Base
 
     # do not process this one ever again
     ProcessedMessage.create(
-      :header_message_id => email.message_id
+      header_message_id: email.message_id
     )
 
   end
@@ -270,33 +269,34 @@ class Notifier < ActionMailer::Base
     def group_email(group, email, body)
       # if is this looks like a reply, try to link this message to its original based on the subject
       if email.subject =~ /^re:/i
-        parent = group.messages.find_by_subject(email.subject.sub(/^re:\s?/i, ''), :order => 'id desc')
+        parent = group.messages.where(subject: email.subject.sub(/^re:\s?/i, '')).order('id desc').first
       else
         parent = nil
       end
       message = Message.create(
-        :group => group,
-        :parent => parent,
-        :person => @person,
-        :subject => email.subject,
-        :body => clean_body(body[:text]),
-        :html_body => clean_body(body[:html]),
-        :dont_send => true
+        group: group,
+        parent: parent,
+        person: @person,
+        subject: email.subject,
+        body: clean_body(body[:text]),
+        html_body: clean_body(body[:html]),
+        dont_send: true
       )
       if message.valid?
         if email.has_attachments?
           email.attachments.each do |attachment|
             name = File.split(attachment.filename.to_s).last
             unless ATTACHMENTS_TO_IGNORE.include? name.downcase
-              att = message.attachments.create(
-                :name         => name,
-                :content_type => attachment.content_type.strip,
-                :file         => FakeFile.new(attachment.body.to_s, name)
+              message.attachments.create(
+                name:         name,
+                content_type: attachment.content_type.strip,
+                file:         FakeFile.new(attachment.body.to_s, name)
               )
             end
           end
         end
-        message.send_to_group(already_sent_to=email.to.to_a)
+        already_sent_to = email.to.to_a
+        message.send_to_group(already_sent_to)
         @message_sent_to_group = true
       end
       message
@@ -320,12 +320,12 @@ class Notifier < ActionMailer::Base
         else
           to_person = message.person
           message = Message.create(
-            :to => to_person,
-            :person => @person,
-            :subject => email.subject,
-            :body => clean_body(body[:text]),
-            :html_body => clean_body(body[:html]),
-            :parent => message
+            to: to_person,
+            person: @person,
+            subject: email.subject,
+            body: clean_body(body[:text]),
+            html_body: clean_body(body[:html]),
+            parent: message
           )
           true
         end
@@ -337,14 +337,14 @@ class Notifier < ActionMailer::Base
       # first try in-reply-to and references headers
       (Array(email.in_reply_to) + Array(email.references)).each do |in_reply_to|
         message_id, code_hash = (m = in_reply_to.match(Message::MESSAGE_ID_RE)) && m[1..2]
-        if message = Message.find_by_id(message_id)
+        if message = Message.where(id: message_id).first
           return [message, code_hash]
         end
       end
       # fallback to using id and code hash inside email body
       # (Outlook does not use the psuedo-standard headers we rely on above)
       message_id, code_hash = (m = get_body(email).to_s.match(Message::MESSAGE_ID_RE_IN_BODY)) && m[1..2]
-      if message = Message.find_by_id(message_id)
+      if message = Message.where(id: message_id).first
         return [message, code_hash]
       end
     end
@@ -352,7 +352,7 @@ class Notifier < ActionMailer::Base
     def get_site(email)
       # prefer the to address
       (Array(email.cc) + Array(email.to)).each do |address|
-        return Site.current if Site.current = Site.find_by_host(address.downcase.split('@').last)
+        return Site.current if Site.current = Site.where(host: address.downcase.split("@").last).first
       end
       # fallback if to address was rewritten
       # Calvin College in MI is known to rewrite our from/reply-to addresses to be the same as the host that made the connection
@@ -365,10 +365,10 @@ class Notifier < ActionMailer::Base
     end
 
     def get_from_person(email)
-      people = Person.find :all, :conditions => ["#{sql_lcase('email')} = ?", email.from.first.downcase]
+      people = Person.where("lcase(email) = ?", email.from.first.downcase).to_a
       if people.length == 0
         # user is not found in the system, try alternate email
-        Person.find :first, :conditions => ["#{sql_lcase('alternate_email')} = ?", email.from.to_s.downcase]
+        Person.where("lcase(alternate_email) = ?", email.from.to_s.downcase).first
       elsif people.length == 1
         people.first
       elsif people.length > 1
@@ -404,11 +404,11 @@ class Notifier < ActionMailer::Base
               end
           end
         end
-        return {:text => text, :html => html}
+        return {text: text, html: html}
       elsif email.content_type.downcase.split(';').first == 'text/html'
-        return {:text => nil, :html => email.body.to_s}
+        return {text: nil, html: email.body.to_s}
       else
-        return {:text => email.body.to_s}
+        return {text: email.body.to_s}
       end
     end
 

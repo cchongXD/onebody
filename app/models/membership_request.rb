@@ -3,7 +3,7 @@ class MembershipRequest < ActiveRecord::Base
   belongs_to :group
   belongs_to :site
 
-  validates_uniqueness_of :group_id, :scope => [:site_id, :person_id]
+  validates_uniqueness_of :group_id, scope: [:site_id, :person_id]
 
   scope_by_site_id
 
@@ -16,7 +16,7 @@ class MembershipRequest < ActiveRecord::Base
   validate :validate_duplicate_membership
 
   def validate_duplicate_membership
-    if Membership.find_by_group_id_and_person_id(group_id, person_id)
+    if Membership.where(group_id: group_id, person_id: person_id).first
       errors.add(:base, 'Already a member of this group.')
     end
   end

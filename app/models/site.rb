@@ -10,26 +10,29 @@ class Site < ActiveRecord::Base
     end
   end
 
-  Site.sub_tables.each { |n| has_many n, :dependent => :delete_all }
+  Site.sub_tables.each { |n| has_many n.to_sym, dependent: :delete_all }
 
   cattr_accessor :current
 
   validates_presence_of :name, :host
   validates_uniqueness_of :name, :host
-  validates_exclusion_of :host, :in => %w(admin api home onebody)
+  validates_exclusion_of :host, in: %w(admin api home onebody)
+  do_not_validate_attachment_file_type :logo
 
   has_attached_file :logo,
-    :path          => ":rails_root/public/system/:rails_env/:class/:attachment/:id/:style/:fingerprint.:extension",
-    :url           => "/system/:rails_env/:class/:attachment/:id/:style/:fingerprint.:extension",
-    :styles        => {
-      :tn          => '32x32#',
-      :small       => '75x75>',
-      :medium      => '150x150>',
-      :layout      => '300x80>',
-      :large       => '400x400>',
-      :original    => '800x800>'
+    path:          ":rails_root/public/system/:rails_env/:class/:attachment/:id/:style/:fingerprint.:extension",
+    url:           "/system/:rails_env/:class/:attachment/:id/:style/:fingerprint.:extension",
+    styles:        {
+      tn:          '32x32#',
+      small:       '75x75>',
+      medium:      '150x150>',
+      layout:      '300x80>',
+      large:       '400x400>',
+      original:    '800x800>'
     },
-    :default_url   => "/images/missing_:style.png"
+    default_url:   "/images/missing_:style.png"
+
+
 
   def default?
     id == 1
@@ -48,7 +51,7 @@ class Site < ActiveRecord::Base
   end
 
   def visible_name
-    settings.find_by_section_and_name('Name', 'Site').value rescue nil
+    settings.where(section: "Name", name: "Site").first.value rescue nil
   end
 
   def count_people
@@ -62,12 +65,12 @@ class Site < ActiveRecord::Base
   after_update :update_url
 
   def update_url
-    if setting = self.settings.find_by_section_and_name('URL', 'Site')
-      setting.update_attributes!(:value => "http://#{host}/")
+    if setting = self.settings.where(section: "URL", name: "Site").first
+      setting.update_attributes!(value: "http://#{host}/")
     end
   end
 
-  after_create :add_settings, :add_pages, :add_publications_group
+  after_create :add_settings, :add_pages
 
   def add_settings
     Setting.update_site(self)
@@ -82,8 +85,8 @@ class Site < ActiveRecord::Base
       html = File.read(filename)
       path, filename = filename.split('pages/').last.split('/')
       pub = nav = path != 'system'
-      unless Page.find_by_path(path)
-        Page.create!(:slug => path, :title => path.titleize, :body => html, :system => true, :navigation => nav, :published => pub)
+      unless Page.where(path: path).first
+        Page.create!(slug: path, title: path.titleize, body: html, system: true, navigation: nav, published: pub)
       end
     end
     Dir["#{Rails.root}/db/pages/**/*.html"].each do |filename|
@@ -93,21 +96,13 @@ class Site < ActiveRecord::Base
       slug = filename.split('.').first
       nav = path != 'system'
       pub = !Page::UNPUBLISHED_PAGES.include?(slug)
-      parent = Page.find_by_path(path)
-      unless parent.children.find_by_slug(slug)
-        page = parent.children.build(:slug => slug, :title => slug.titleize, :body => html, :system => true, :navigation => nav, :published => pub)
+      parent = Page.where(path: path).first
+      unless parent.children.where(slug: slug).first
+        page = parent.children.build(slug: slug, title: slug.titleize, body: html, system: true, navigation: nav, published: pub)
         page.site_id = self.id
         page.save!
       end
     end
-    Site.current = was
-  end
-
-  def add_publications_group
-    was = Site.current
-    Site.current = self
-    group = Group.new(:name => 'Publications', :description => 'People who wish to be notified when new publications become available on the website.', :category => 'Subscription', :address => 'publications', :members_send => false, :approved => true, :hidden => true)
-    group.save(:validate => false)
     Site.current = was
   end
 
@@ -126,7 +121,7 @@ class Site < ActiveRecord::Base
 
   class << self
     def each
-      Site.where(:active => true).each do |site|
+      Site.where(active: true).each do |site|
         Site.current = site
         yield(site)
       end

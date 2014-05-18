@@ -1,19 +1,19 @@
 class PrayerRequest < ActiveRecord::Base
+
+  include Authority::Abilities
+  self.authorizer_name = 'PrayerRequestAuthorizer'
+
   belongs_to :group
   belongs_to :person
   belongs_to :site
 
   scope_by_site_id
 
-  attr_accessible :request, :answer, :answered_at
-
-  acts_as_logger LogItem
-
   validates_presence_of :request, :group_id, :person_id
 
   def name
     group_name = group.name rescue '?'
-    I18n.t('prayer.name', :group_name => group_name)
+    I18n.t('prayer.name', group_name: group_name)
   end
 
   def body
@@ -31,13 +31,13 @@ class PrayerRequest < ActiveRecord::Base
   def create_as_stream_item
     return unless streamable?
     StreamItem.create!(
-      :body            => body,
-      :person_id       => person_id,
-      :group_id        => group_id,
-      :streamable_type => 'PrayerRequest',
-      :streamable_id   => id,
-      :created_at      => created_at,
-      :shared          => person.share_activity?
+      body:            body,
+      person_id:       person_id,
+      group_id:        group_id,
+      streamable_type: 'PrayerRequest',
+      streamable_id:   id,
+      created_at:      created_at,
+      shared:          person.share_activity?
     )
   end
 
@@ -45,7 +45,7 @@ class PrayerRequest < ActiveRecord::Base
 
   def update_stream_items
     return unless streamable?
-    StreamItem.find_all_by_streamable_type_and_streamable_id('PrayerRequest', id).each do |stream_item|
+    StreamItem.where(streamable_type: "PrayerRequest", streamable_id: id).each do |stream_item|
       stream_item.body  = body
       stream_item.save
     end
@@ -54,6 +54,6 @@ class PrayerRequest < ActiveRecord::Base
   after_destroy :delete_stream_items
 
   def delete_stream_items
-    StreamItem.destroy_all(:streamable_type => 'PrayerRequest', :streamable_id => id)
+    StreamItem.destroy_all(streamable_type: 'PrayerRequest', streamable_id: id)
   end
 end

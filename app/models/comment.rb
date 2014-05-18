@@ -1,4 +1,8 @@
 class Comment < ActiveRecord::Base
+
+  include Authority::Abilities
+  self.authorizer_name = 'CommentAuthorizer'
+
   belongs_to :person
   belongs_to :site
 
@@ -16,8 +20,6 @@ class Comment < ActiveRecord::Base
   def name
     "Comment on #{on ? on.name : '?'}"
   end
-
-  acts_as_logger LogItem
 
   after_create :update_stream_items_on_create
 
@@ -53,6 +55,6 @@ class Comment < ActiveRecord::Base
       streamable_type = 'Album'
       streamable_id   = on.album_id
     end
-    StreamItem.find_all_by_streamable_type_and_streamable_id(streamable_type, streamable_id)
+    StreamItem.where(streamable_type: streamable_type, streamable_id: streamable_id).to_a
   end
 end

@@ -1,21 +1,20 @@
 class Page < ActiveRecord::Base
 
+  include Authority::Abilities
+  self.authorizer_name = 'PageAuthorizer'
+
   UNPUBLISHED_PAGES = %w(sign_up_header sign_up_verify)
 
-  belongs_to :parent, :class_name => 'Page'
-  has_many :children, :class_name => 'Page', :foreign_key => 'parent_id', :dependent => :destroy
-  has_many :attachments
+  belongs_to :parent, class_name: 'Page'
+  has_many :children, class_name: 'Page', foreign_key: 'parent_id', dependent: :destroy
   belongs_to :site
 
   scope_by_site_id
-  acts_as_logger LogItem
-
-  attr_accessible :slug, :title, :body, :parent_id, :parent, :path, :published, :navigation, :raw
 
   validates_presence_of :slug, :title, :body
-  validates_uniqueness_of :path, :scope => :site_id
-  validates_exclusion_of :slug, :in => %w(admin edit new)
-  validates_format_of :slug, :with => /^[a-z][a-z_]*$/
+  validates_uniqueness_of :path, scope: :site_id
+  validates_exclusion_of :slug, in: %w(admin edit new)
+  validates_format_of :slug, with: /\A[a-z0-9][a-z0-9_]*\z/
 
   before_save :update_path
 
@@ -50,7 +49,7 @@ class Page < ActiveRecord::Base
     if home?
       Page.root_pages
     else
-      children.find_all_by_published_and_navigation(true, true)
+      children.where(published: true, navigation: true)
     end
   end
 
@@ -81,14 +80,14 @@ class Page < ActiveRecord::Base
 
     def find_by_id_or_path(id_or_path)
       if id_or_path.is_a?(String) and id_or_path !~ /^\d+$/
-        find_by_path(id_or_path)
+        where(path: id_or_path).first
       else
-        find_by_id(id_or_path)
+        where(id: id_or_path).first
       end
     end
 
     def find_by_path(path)
-      find(:first, :conditions => ['path = ?', normalize_path(path)])
+      where(path: normalize_path(path)).first
     end
 
     def normalize_path(path)
@@ -105,7 +104,7 @@ class Page < ActiveRecord::Base
     end
 
     def root_pages(include_home=false, published=true, navigation=true)
-      Page.find_all_by_parent_id_and_published_and_navigation(nil, published, navigation).select { |p| include_home or not p.home? }
+      Page.where(parent_id: nil, published: published, navigation: navigation).to_a.select { |p| include_home or not p.home? }
     end
 
   end

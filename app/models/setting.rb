@@ -33,7 +33,7 @@ class Setting < ActiveRecord::Base
       return nil unless SETTINGS.any?
       section, name = section.to_s, name.to_s
       if global?(section, name)
-        SETTINGS[0][section][name]
+        SETTINGS[0][section][name].try(:value)
       else
         if Site.current
           if SETTINGS[Site.current.id].nil?
@@ -42,7 +42,7 @@ class Setting < ActiveRecord::Base
           end
           if SETTINGS[Site.current.id][section]
             return false if section == 'features' and Site.current.respond_to?("#{name}_enabled?") and not Site.current.send("#{name}_enabled?")
-            SETTINGS[Site.current.id][section][name] || default
+            SETTINGS[Site.current.id][section][name].try(:value) || default
           else
             default
           end
@@ -58,13 +58,29 @@ class Setting < ActiveRecord::Base
 
     def delete(section, name) # must be proper case section and name
       raise 'Must be proper case string' if name.is_a? Symbol
-      find_all_by_section_and_name(section, name).each { |s| s.destroy }
+      where(section: section, name: name).each { |s| s.destroy }
     end
 
-    def set(site_id, section, name, value) # must be proper case section and name
-      raise 'Must be proper case string' if name.is_a? Symbol
-      if setting = find_by_site_id_and_section_and_name(site_id, section, name)
-        setting.update_attributes! :value => value
+    def set(*args)
+      if args.length == 3
+        set_current(*args)
+      else
+        set_any(*args)
+      end
+    end
+
+    def set_current(section, name, value)
+      set_any(Site.current.id, section, name, value)
+    end
+
+    def set_any(site_id, section, name, value)
+      if section.is_a?(Symbol) and name.is_a?(Symbol)
+        setting = SETTINGS[site_id][section.to_s][name.to_s]
+        section = setting.section
+        name = setting.name
+      end
+      if setting = where(site_id: site_id, section: section, name: name).first
+        setting.update_attributes! value: value
       else
         raise "No setting found for #{section}/#{name}."
       end
@@ -72,6 +88,15 @@ class Setting < ActiveRecord::Base
     end
 
     def set_global(section, name, value); set(nil, section, name, value); end
+
+    def reload_if_stale
+      precache_settings(true) if cache_stale?
+    end
+
+    def cache_stale?
+      Site.current.settings_changed_at and \
+      SETTINGS['timestamp'] < Site.current.settings_changed_at
+    end
 
     def precache_settings(fresh=false)
       return if SETTINGS.any? and not fresh
@@ -82,7 +107,7 @@ class Setting < ActiveRecord::Base
         name = setting.read_attribute(:name).downcase.gsub(/\s/, '_')
         SETTINGS[site_id] ||= {}
         SETTINGS[site_id][section] ||= {}
-        SETTINGS[site_id][section][name] = setting.value
+        SETTINGS[site_id][section][name] = setting
       end
       SETTINGS['timestamp'] = Time.now unless SETTINGS.empty?
       SETTINGS
@@ -118,7 +143,7 @@ class Setting < ActiveRecord::Base
     def update_all
       settings = load_settings_hash
       # per site settings
-      Site.find_all_by_active(true).each do |site|
+      Site.where(active: true).each do |site|
         if get_hash_of_settings_in_db(site.id) != get_hash_of_settings_in_yaml(settings)
           Rails.logger.info("Reloading settings for site #{site.id}...")
           update_site_from_hash(site, settings)
@@ -127,10 +152,10 @@ class Setting < ActiveRecord::Base
       # globals
       if get_hash_of_settings_in_db != get_hash_of_settings_in_yaml(settings, true)
         Rails.logger.info("Reloading global settings...")
-        global_settings_in_db = Setting.find_all_by_global(true)
+        global_settings_in_db = Setting.where(global: true).to_a
         each_setting_from_hash(settings, true) do |section_name, setting_name, setting|
           unless global_settings_in_db.detect { |s| s.section == section_name and s.name == setting_name }
-            global_settings_in_db << Setting.create!(setting.merge(:section => section_name, :name => setting_name))
+            global_settings_in_db << Setting.create!(setting.merge(section: section_name, name: setting_name))
           end
         end
         global_settings_in_db.each do |setting|
@@ -143,11 +168,11 @@ class Setting < ActiveRecord::Base
     end
 
     def update_site_from_hash(site, settings)
-      settings_in_db = Setting.find_all_by_site_id(site.id)
+      settings_in_db = Setting.where(site_id: site.id).to_a
       each_setting_from_hash(settings, false) do |section_name, setting_name, setting|
         unless settings_in_db.detect { |s| s.section == section_name and s.name == setting_name }
           setting['site_id'] = site.id
-          settings_in_db << Setting.create!(setting.merge(:section => section_name, :name => setting_name))
+          settings_in_db << Setting.create!(setting.merge(section: section_name, name: setting_name))
         end
       end
       settings_in_db.each do |setting|
@@ -172,7 +197,7 @@ class Setting < ActiveRecord::Base
     end
 
     def update_site_from_params(id, params)
-      Setting.find_all_by_site_id(id).each do |setting|
+      Setting.where(site_id: id).each do |setting|
         next if setting.hidden?
         value = params[setting.id.to_s]
         if setting.format == 'list'
@@ -180,13 +205,13 @@ class Setting < ActiveRecord::Base
         elsif value == ''
           value = nil
         end
-        setting.update_attributes! :value => value
+        setting.update_attributes! value: value
       end
       Setting.precache_settings(true)
     end
 
     def update_global_from_params(params)
-      Setting.find_all_by_site_id_and_global(nil, true).each do |setting|
+      Setting.where(site_id: nil, global: true).each do |setting|
         next if setting.hidden?
         value = params[setting.id.to_s]
         if setting.format == 'list'
@@ -194,7 +219,7 @@ class Setting < ActiveRecord::Base
         elsif value == ''
           value = nil
         end
-        setting.update_attributes! :value => value
+        setting.update_attributes! value: value
       end
       Setting.precache_settings(true)
     end
